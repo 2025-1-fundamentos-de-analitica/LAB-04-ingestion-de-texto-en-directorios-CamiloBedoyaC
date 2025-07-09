@@ -5,6 +5,10 @@
 Escriba el codigo que ejecute la accion solicitada en cada pregunta.
 """
 
+import os
+import zipfile
+import pandas as pd
+import shutil
 
 def pregunta_01():
     """
@@ -71,3 +75,40 @@ def pregunta_01():
 
 
     """
+    rutaZip = "files/input.zip"
+    rutaDescomprimida = "input"
+
+    # Si ya existe la carpeta 'input', eliminarla para garantizar la estructura correcta
+    if os.path.exists(rutaDescomprimida):
+        shutil.rmtree(rutaDescomprimida)
+
+    # Descomprimir nuevamente
+    with zipfile.ZipFile(rutaZip, 'r') as archivoZip:
+        archivoZip.extractall(".")
+
+    # Crear carpeta de salida
+    rutaSalida = "files/output"
+    os.makedirs(rutaSalida, exist_ok=True)
+
+    # Función para procesar los archivos por sentimiento
+    def procesarDatos(tipo):
+        rutaBase = os.path.join(rutaDescomprimida, tipo)
+        datos = []
+        for sentimiento in ["positive", "negative", "neutral"]:
+            carpeta = os.path.join(rutaBase, sentimiento)
+            for nombreArchivo in sorted(os.listdir(carpeta)):
+                rutaArchivo = os.path.join(carpeta, nombreArchivo)
+                with open(rutaArchivo, encoding="utf-8") as f:
+                    texto = f.read().strip()
+                    datos.append({
+                        "phrase": texto,
+                        "target": sentimiento
+                    })
+        return pd.DataFrame(datos)
+
+    # Generar los archivos CSV
+    dfTrain = procesarDatos("train")
+    dfTest = procesarDatos("test")
+
+    dfTrain.to_csv(os.path.join(rutaSalida, "train_dataset.csv"), index=False)
+    dfTest.to_csv(os.path.join(rutaSalida, "test_dataset.csv"), index=False)
